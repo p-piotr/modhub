@@ -96,8 +96,8 @@ class ScreenIO():
                 pass
 
     def __padRefresh(self):
-        self._pad.refresh(self._padPos, 0, 0, 0, self._height - (self._inputWindowHeight + 1), self._width)
         self._scr.move(self._cursorY, self._cursorX)
+        self._pad.refresh(self._padPos, 0, 0, 0, self._height - (self._inputWindowHeight + 1), self._width)
 
     def __refreshInputWindow(self):
         self._inputWindow.clear()
