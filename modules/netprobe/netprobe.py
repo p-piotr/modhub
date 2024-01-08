@@ -10,7 +10,7 @@ def main(sio : ScreenIO, args : list):
     global running
     if not running:
         running = True
-        sr, ss = globals.sockets['recv'], globals.sockets['send']
+        sr, ss = globals.GetReceivingSocket(), globals.GetSendingSocket()
         gateway = Networking.Interfaces.get_network_gateway('wlan0', bytearr=False)
         sio.print(gateway + '\n')
     else:

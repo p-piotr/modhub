@@ -27,3 +27,15 @@ def GetOptionValue(option : str):
     
 def GetDefaultInterface():
     return GetOptionValue('iface')
+
+def GetReceivingSocket():
+    try:
+        return sockets['recv']
+    except KeyError:
+        return None
+    
+def GetSendingSocket():
+    try:
+        return sockets['send']
+    except KeyError:
+        return None

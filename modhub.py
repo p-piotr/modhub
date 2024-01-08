@@ -84,7 +84,7 @@ def check_for_root():
         exit(-1)
 
 if __name__ == '__main__':
-    check_for_root()
+    #check_for_root()
     globals.variables['ifaces'] = Networking.Interfaces.get_network_interfaces()
     parser = argparse.ArgumentParser(description='temporary description')
     parser.add_argument('--interface', help='use specified interface (default: no interface)')

@@ -9,7 +9,7 @@ running = None
 def main(sio : ScreenIO, args : list):
     global running
     running = True
-    sr, ss = globals.sockets['recv'], globals.sockets['send']
+    sr, ss = globals.GetReceivingSocket(), globals.GetSendingSocket()
     packet = Networking.Layers.Ethernet.ARP.create_arp_request_header('255.255.255.255')
     sio.print(''.join(['{:02x} '.format(x) for x in packet]) + '\n')
     sb = ss.send(packet)

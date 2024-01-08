@@ -321,8 +321,8 @@ class Networking:
         
         def initialize_sockets():
             globals.sockets.clear()
-            globals.sockets['send'] = Networking.Sockets.get_sending_socket()
-            globals.sockets['recv'] = Networking.Sockets.get_receiving_socket()
+            #globals.sockets['send'] = Networking.Sockets.get_sending_socket()
+            #globals.sockets['recv'] = Networking.Sockets.get_receiving_socket()
         
         def close_sockets():
             for s in globals.sockets.values():
