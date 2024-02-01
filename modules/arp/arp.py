@@ -1,4 +1,4 @@
-from screenio import ScreenIO
+from screenio2 import ScreenIO
 import curses
 import globals
 from networking import Networking
