@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from screenio import ScreenIO
+from screenio2 import ScreenIO
 from networking import Networking
 import globals
 from globals import ModuleDictionary, AnsiCodes
@@ -15,12 +15,15 @@ import modules.set.set as set
 import modules.show.show as show
 import modules.get.get as get
 import modules.arp.arp as arp
+import modules.netprobe.netprobe as netprobe
 
 ModuleDictionary['clear'] = clear
 ModuleDictionary['show'] = show
 ModuleDictionary['set'] = set
 ModuleDictionary['get'] = get
 ModuleDictionary['arp'] = arp
+ModuleDictionary['netprobe'] = netprobe
+ModuleDictionary['test'] = None
 
 def importModule(sio : ScreenIO, moduleName : str):
     try:
@@ -48,7 +51,7 @@ def main(sio : ScreenIO, interface : str):
     while sio.isRunning():
         command = sio.scan()
         commandList = command.split(' ')
-        if commandList[0] in [ 'exit', 'quit' ]:
+        if commandList[0] in [ 'exit', 'quit' ] and len(commandList) == 1:
             sio.print('\nFinishing...\n')
             cleanup(sio)
             break

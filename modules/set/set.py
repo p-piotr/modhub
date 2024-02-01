@@ -15,7 +15,7 @@ def main(sio : ScreenIO, args : list):
     option = args[1]
     value = ''.join(args[i] + ' ' for i in range(2, len(args)))
     value = value.rstrip()
-    if option == 'iface':
+    if option in { 'iface', 'interface' }:
         if value not in globals.variables['ifaces']:
             printInterfaceDoesntExist(sio, value)
         else:

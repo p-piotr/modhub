@@ -1,4 +1,4 @@
-from screenio import ScreenIO
+from screenio2 import ScreenIO
 from networking import Networking
 import curses
 import globals
@@ -7,31 +7,32 @@ from globals import ModuleDictionary, CursesColors
 def showIfaces(sio : ScreenIO):
     sio.print('\n')
     for i, iface in enumerate(globals.GetOptionValue('ifaces'), 1):
-        ip = Networking.IP.get_ip_address(iface)
+        ip = Networking.IP.get_ip_address(iface, bytearr=False)
         sio.print(f'\tInterface #{i}:\t')
-        sio.print(iface, curses.A_BOLD)
+        sio.print(iface)
         if ip == 'null':
             sio.print('\t(no IP address available)')
         else:
             sio.print(f'\t(at {ip})')
         if globals.GetOptionValue('iface') == iface:
-            sio.print(' (* currently chosen)', CursesColors['GD'] | curses.A_BOLD)
+            sio.print(' (* currently chosen)', bold=True)
         sio.print('\n')
     sio.print('\n')
 
 def showModules(sio : ScreenIO):
     sio.print('\n')
     for module in ModuleDictionary:
-        sio.print(f'\t{module}\t')
+        tabs = (1 - len(module) // 8) + 3
+        sio.print(f'\t{module}' + tabs * '\t')
         if ModuleDictionary[module] is not None:
-            sio.print('imported\n', CursesColors['GD'])
+            sio.print('loaded\n', font_color='green')
         else:
-            sio.print('not imported\n', CursesColors['RD'])
+            sio.print('not loaded\n', font_color='red')
     sio.print('\n')
 
 def main(sio : ScreenIO, args : list):
     value = args[1]
-    if value == 'ifaces':
+    if value in { 'ifaces', 'interfaces' }:
         showIfaces(sio)
     elif value == 'modules':
         showModules(sio)
