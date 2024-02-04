@@ -17,61 +17,96 @@ class Networking:
         def cubytearray(b):
             return (c_ubyte * len(b))(*bytearray(b))
 
+        def convert_ip_address(ip_address : str | bytes) -> str | bytes:
+            if type(ip_address) == str:
+                return inet_aton(ip_address)
+            return inet_ntoa(ip_address)
+
+        def convert_mac_address(mac_address : str | bytes) -> str | bytes:
+            if type(mac_address) == str:
+                return bytes.fromhex(mac_address.replace(':', ''))
+            return ''.join(':{:02X}'.format(b) for b in mac_address).lstrip(':')
+
     class IP:
-        def get_ip_address(ifname='default', bytearr=True):
-            if ifname == 'default':
-                ifname = globals.GetDefaultInterface()
+        def get_ip_address(iface='default', bytearr=True):
+            if iface == 'default':
+                iface = globals.GetDefaultInterface()
             with socket(AF_INET, SOCK_DGRAM) as s:
                 try:
                     ip = fcntl.ioctl(
                         s.fileno(),
                         Networking.SIOCGIFADDR,
-                        struct.pack('256s', ifname[:15].encode('utf-8'))
+                        struct.pack('256s', iface[:15].encode('utf-8'))
                     )[20:24]
                     if bytearr:
-                        return bytearray(ip)
+                        return ip
                     return inet_ntoa(ip)
                 except OSError:
-                    return 'null'
+                    return None
         
-        def get_br_address(ifname='default', bytearr=True):
-            if ifname == 'default':
-                ifname = globals.GetDefaultInterface()
+        def get_br_address(iface='default', bytearr=True):
+            if iface == 'default':
+                iface = globals.GetDefaultInterface()
             with socket(AF_INET, SOCK_DGRAM) as s:
                 try:
                     broadcast_ip = fcntl.ioctl(
                         s.fileno(),
                         Networking.SIOCGIFBRDADDR,
-                        struct.pack('256s', ifname[:15].encode('utf-8'))
+                        struct.pack('256s', iface[:15].encode('utf-8'))
                     )[20:24]
                     if bytearr:
-                        return bytearray(broadcast_ip)
+                        return broadcast_ip
                     return inet_ntoa(broadcast_ip)
                 except OSError:
-                    return 'null'
-                
-        def convert_ip_address(ip_address : str) -> bytearray:
-            return bytearray(inet_aton(ip_address))
+                    return None
+
+        def get_network_gateway(iface='default', bytearr=True) -> bytes | str:
+            if iface == 'default':
+                iface = globals.GetDefaultInterface()
+            with open('/proc/net/route') as f:
+                for line in f:
+                    fields = line.strip().split()
+                    if fields[0] != iface or fields[1] != '00000000' or not int(fields[3], 16) & 2:
+                        continue
+                    if bytearr:
+                        return struct.pack('<L', int(fields[2], 16))
+                    else:
+                        return inet_ntoa(struct.pack('<L', int(fields[2], 16)))
+                return None
+            
+        def get_network_mask(iface='default', bytearr=True) -> bytes | str:
+            if iface == 'default':
+                iface = globals.GetDefaultInterface()
+            with socket(AF_INET, SOCK_DGRAM) as s:
+                s.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, str(iface + '\0').encode('utf-8'))
+                try:
+                    mask = fcntl.ioctl(
+                        s.fileno(),
+                        Networking.SIOCGIFNETMASK,
+                        struct.pack('256s', iface[:15].encode('utf-8'))
+                    )[20:24]
+                    if bytearr:
+                        return mask
+                    return inet_ntoa(mask)
+                except OSError:
+                    return None
 
     class Mac:       
-        def get_mac_address(ifname='default', bytearr=True):
-            if ifname == 'default':
-                ifname = globals.GetDefaultInterface()
+        def get_mac_address(iface='default', bytearr=True):
+            if iface == 'default':
+                iface = globals.GetDefaultInterface()
             with socket(AF_INET, SOCK_DGRAM) as s:
                 try:
                     mac = fcntl.ioctl(
                         s.fileno(),
                         Networking.SIOCGIFHWADDR,
-                        struct.pack('256s', ifname[:15].encode('utf-8'))
+                        struct.pack('256s', iface[:15].encode('utf-8'))
                     )[18:24]
                     if bytearr:
-                        return bytearray(mac)
-                    return ''.join(':{:02X}'.format(b) for b in mac).lstrip(':')
+                        return mac
+                    return Networking.Convert.convert_mac_address(mac)
                 except OSError:
-                    return 'null'
-        
-        def convert_mac_address(mac_address : str) -> bytearray:
-            return bytearray(bytes.fromhex(mac_address.replace(':', '')))
+                    return None
 
     class Interfaces:
         def get_network_interfaces() -> list:
@@ -80,18 +115,6 @@ class Networking:
             for iface in enumerate(if_ni):
                 ifaces.append(iface[1][1])
             return ifaces
-        
-        def get_network_gateway(iface : str, bytearr=True):
-            with open('/proc/net/route') as f:
-                for line in f:
-                    fields = line.strip().split()
-                    if fields[0] != iface or fields[1] != '00000000' or not int(fields[3], 16) & 2:
-                        continue
-                    if bytearr:
-                        return bytearray(struct.pack('<L', int(fields[2], 16)))
-                    else:
-                        return inet_ntoa(struct.pack('<L', int(fields[2], 16)))
-                return 'None'
         
     class Layers:
         class Ethernet:
@@ -103,7 +126,7 @@ class Networking:
                 ]
 
             def create_ethernet_header(es : EthernetStruct) -> bytes:
-                return bytes(ctypes.string_at(ctypes.addressof(es), ctypes.sizeof(es)))
+                return ctypes.string_at(ctypes.addressof(es), ctypes.sizeof(es))
             
             def interpret_ethernet_header(ethernet_header : bytes) -> EthernetStruct:
                 return Networking.Layers.Ethernet.EthernetStruct.from_buffer_copy(ethernet_header)
@@ -123,29 +146,28 @@ class Networking:
                     ]
                 
                 def create_arp_header(arp : ARPStruct) -> bytes:
-                    return bytes(ctypes.string_at(ctypes.addressof(arp), ctypes.sizeof(arp)))
+                    return ctypes.string_at(ctypes.addressof(arp), ctypes.sizeof(arp))
                 
                 def interpret_arp_header(arp_header : bytes) -> ARPStruct:
                     return Networking.Layers.Ethernet.ARP.ARPStruct.from_buffer_copy(arp_header)
                 
-                def create_arp_request_header(target_ip : str, source_mac='default', source_ip='default') -> bytes:
+                def create_arp_request_header(target_ip, source_mac='default', source_ip='default') -> bytes:
                     if source_mac == 'default':
                         source_mac = Networking.Mac.get_mac_address()
                     if source_ip == 'default':
                         source_ip = Networking.IP.get_ip_address()
-
-                    if type(source_mac) != bytearray:
-                        source_mac = Networking.Mac.convert_mac_address(source_mac)
-                    if type(source_ip) != bytearray:
-                        source_ip = Networking.IP.convert_ip_address(source_ip)
-                    if type(target_ip) != bytearray:
-                        target_ip = Networking.IP.convert_ip_address(target_ip)
+                    if type(source_mac) != bytes:
+                        source_mac = Networking.Convert.convert_mac_address(source_mac)
+                    if type(source_ip) != bytes:
+                        source_ip = Networking.Convert.convert_ip_address(source_ip)
+                    if type(target_ip) != bytes:
+                        target_ip = Networking.Convert.convert_ip_address(target_ip)
                     source_mac = Networking.Convert.cubytearray(source_mac)
                     source_ip = Networking.Convert.cubytearray(source_ip)
                     target_ip = Networking.Convert.cubytearray(target_ip)
                     eth = Networking.Layers.Ethernet.EthernetStruct()
                     arp = Networking.Layers.Ethernet.ARP.ARPStruct()
-                    eth.destination_mac = Networking.Convert.cubytearray(Networking.Mac.convert_mac_address('FF:FF:FF:FF:FF:FF'))
+                    eth.destination_mac = Networking.Convert.cubytearray(Networking.Convert.convert_mac_address('FF:FF:FF:FF:FF:FF'))
                     eth.source_mac = source_mac
                     eth.type = 0x0806
                     arp.hardware_type = 1
@@ -155,19 +177,19 @@ class Networking:
                     arp.opcode = 1
                     arp.sender_mac_address = source_mac
                     arp.sender_ip_address = source_ip
-                    arp.target_mac_address = Networking.Convert.cubytearray(Networking.Mac.convert_mac_address('00:00:00:00:00:00'))
+                    arp.target_mac_address = Networking.Convert.cubytearray(Networking.Convert.convert_mac_address('00:00:00:00:00:00'))
                     arp.target_ip_address = target_ip
                     return Networking.Layers.Ethernet.create_ethernet_header(eth) + Networking.Layers.Ethernet.ARP.create_arp_header(arp)
                 
                 def create_arp_reply_header(source_mac, source_ip, target_mac, target_ip):
-                    if type(source_mac) != bytearray:
-                        source_mac = Networking.Mac.convert_mac_address(source_mac)
-                    if type(target_mac) != bytearray:
-                        target_mac = Networking.Mac.convert_mac_address(target_mac)
-                    if type(source_ip) != bytearray:
-                        source_ip = Networking.IP.convert_ip_address(source_ip)
-                    if type(target_ip) != bytearray:
-                        target_ip = Networking.IP.convert_ip_address(target_ip)
+                    if type(source_mac) != bytes:
+                        source_mac = Networking.Convert.convert_mac_address(source_mac)
+                    if type(target_mac) != bytes:
+                        target_mac = Networking.Convert.convert_mac_address(target_mac)
+                    if type(source_ip) != bytes:
+                        source_ip = Networking.Convert.convert_ip_address(source_ip)
+                    if type(target_ip) != bytes:
+                        target_ip = Networking.Convert.convert_ip_address(target_ip)
                     source_mac = Networking.Convert.cubytearray(source_mac)
                     target_mac = Networking.Convert.cubytearray(target_mac)
                     source_ip = Networking.Convert.cubytearray(source_ip)
@@ -207,7 +229,7 @@ class Networking:
                     ]
 
                 def create_ipv4_layer(ips : IPv4Struct) -> bytes:
-                    return bytes(ctypes.string_at(ctypes.addressof(ips), ctypes.sizeof(ips)))
+                    return ctypes.string_at(ctypes.addressof(ips), ctypes.sizeof(ips))
 
                 def interpret_ipv4_layer(ipv4_layer : bytes) -> IPv4Struct:
                     return Networking.Layers.Ethernet.IPv4.IPv4Struct.from_buffer_copy(ipv4_layer)
@@ -222,7 +244,7 @@ class Networking:
                         ]
 
                     def create_udp_layer(udps : UDPStruct) -> bytes:
-                        return bytes(ctypes.string_at(ctypes.addressof(udps), ctypes.sizeof(udps)))
+                        return ctypes.string_at(ctypes.addressof(udps), ctypes.sizeof(udps))
 
                     def interpret_udp_layer(udp_layer : bytes) -> UDPStruct:
                         return Networking.Layers.Ethernet.IPv4.UDP.UDPStruct.from_buffer_copy(udp_layer)
@@ -321,9 +343,10 @@ class Networking:
         
         def initialize_sockets():
             globals.sockets.clear()
-            #globals.sockets['send'] = Networking.Sockets.get_sending_socket()
-            #globals.sockets['recv'] = Networking.Sockets.get_receiving_socket()
+            globals.sockets['send'] = Networking.Sockets.get_sending_socket()
+            globals.sockets['recv'] = Networking.Sockets.get_receiving_socket()
         
         def close_sockets():
             for s in globals.sockets.values():
                 s.close()
+            globals.sockets.clear()

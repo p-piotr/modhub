@@ -10,7 +10,7 @@ def showIfaces(sio : ScreenIO):
         ip = Networking.IP.get_ip_address(iface, bytearr=False)
         sio.print(f'\tInterface #{i}:\t')
         sio.print(iface)
-        if ip == 'null':
+        if ip is None:
             sio.print('\t(no IP address available)')
         else:
             sio.print(f'\t(at {ip})')

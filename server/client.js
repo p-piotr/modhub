@@ -9,7 +9,6 @@ function onKeyDown(e) {
     focusOnInput(e);
     input = document.getElementById('input');
     var keyCode = e.which;
-    //console.log(keyCode)
     switch (keyCode)
     {
         case 8: // backspace
@@ -29,11 +28,19 @@ function onKeyDown(e) {
         case 9: // tab
             input.value += ' ';
             e.preventDefault();
+            break;
         case 40: // down arrow
         case 38: // up arrow
             e.preventDefault();
             break;
+        case 32: // space
+            if (input.value.length == 2)
+                e.preventDefault();
+            break;
+        default:
+            break;
     }
+    focusOnInput()
 }
 
 function keepFocusOnInput() {
@@ -97,7 +104,7 @@ ws.addEventListener('message', function(event) {
 
 ws.addEventListener('open', function(event) {
     output = document.getElementById('output');
-    output.innerHTML = '<span style=\'color: #04E800\'>Connection with terminal established!</span><br><br>'
+    output.innerHTML = '<span style=\'color: #04E800\'>Connection with terminal established!</span><br>'
     scrollToBottom();
     ws_connection = true;
 })

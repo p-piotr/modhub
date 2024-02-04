@@ -15,7 +15,6 @@ def main(sio : ScreenIO, args : list):
     sb = ss.send(packet)
     sio.print(f'Sent bytes: {sb}\n')
 
-
 def finish(sio : ScreenIO):
     global running
     running = False

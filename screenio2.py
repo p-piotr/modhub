@@ -129,7 +129,7 @@ class ScreenIO:
         self.ws_t.start()
 
     def printPrompt(self):
-        self.print(ScreenIO.styleString(str(datetime.fromtimestamp(time()))), background_color='#A2734C')
+        self.print('\n' + ScreenIO.styleString(str(datetime.fromtimestamp(time()))), background_color='#A2734C')
         if globals.GetOptionValue('iface') is not None:
             self.print(ScreenIO.styleString(f' / {Networking.IP.get_ip_address(globals.GetOptionValue("iface"), bytearr=False)}'), background_color='#A2734C')
         self.print(' » ')
@@ -172,6 +172,14 @@ class ScreenIO:
         str = ScreenIO.styleString(str, font_color, background_color, bold)
         self.outputQueue.put(str)
         self.outputBuffer.append(str)
+
+    
+    def printModulePrompt(self, moduleName):
+        self.print('[')
+        self.print(str(datetime.now().strftime('%H:%M:%S:%f')))
+        self.print('] [')
+        self.print(ScreenIO.styleString(moduleName, font_color='#3DA659'))
+        self.print('] ') # » 
 
     def scan(self) -> str:
         return self.inputQueue.get()
