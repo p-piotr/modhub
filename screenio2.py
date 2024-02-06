@@ -6,11 +6,10 @@ import asyncio
 from datetime import datetime
 import websockets
 from threading import Thread, Event
-from time import sleep, time
+from time import time
 from queue import Queue, Empty
 import functools
 import globals
-import signal
 from networking import Networking
 from websockets.exceptions import ConnectionClosed, ConnectionClosedError, ConnectionClosedOK
 
@@ -129,9 +128,9 @@ class ScreenIO:
         self.ws_t.start()
 
     def printPrompt(self):
-        self.print('\n' + ScreenIO.styleString(str(datetime.fromtimestamp(time()))), background_color='#A2734C')
+        self.print('\n' + str(datetime.fromtimestamp(time())), background_color='#A2734C')
         if globals.GetOptionValue('iface') is not None:
-            self.print(ScreenIO.styleString(f' / {Networking.IP.get_ip_address(globals.GetOptionValue("iface"), bytearr=False)}'), background_color='#A2734C')
+            self.print(f' / {Networking.IP.get_ip_address(globals.GetOptionValue("iface"), bytearr=False)}', background_color='#A2734C')
         self.print(' » ')
 
     def outputStringParser(self, str):
@@ -178,7 +177,7 @@ class ScreenIO:
         self.print('[')
         self.print(str(datetime.now().strftime('%H:%M:%S:%f')))
         self.print('] [')
-        self.print(ScreenIO.styleString(moduleName, font_color='#3DA659'))
+        self.print(moduleName, font_color='#3DA659')
         self.print('] ') # » 
 
     def scan(self) -> str:

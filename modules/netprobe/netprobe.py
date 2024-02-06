@@ -5,8 +5,7 @@ from socket import *
 from binary_operations import binary_and, binary_not
 from threading import Thread, Event
 from select import select
-from time import sleep, time
-from datetime import datetime
+from time import sleep
 
 stop = Event()
 ss, sr = None, None
@@ -22,15 +21,15 @@ def main(sio : ScreenIO, args : list):
         return
     running = True
     stop.clear()
+    globals.variables['host_map'] = {}
     gateway = Networking.IP.get_network_gateway()
     netmask = Networking.IP.get_network_mask()
     potential_hosts = get_potential_hosts(gateway, netmask)
     ss = Networking.Sockets.get_sending_socket()
     sr = Networking.Sockets.get_receiving_socket()
-    hosts = {}
     sr.setblocking(False)
     t_s = Thread(target=send_arp_requests, args=(sio, ss, potential_hosts, stop))
-    t_r = Thread(target=listen_for_arp_replys, args=(sio, sr, potential_hosts, hosts, stop))
+    t_r = Thread(target=listen_for_arp_replys, args=(sio, sr, potential_hosts, globals.variables['host_map'], stop))
     t_s.start()
     t_r.start()
 
@@ -48,18 +47,18 @@ def get_potential_hosts(gateway, netmask):
     hosts = sorted(list(hosts))
     return hosts
 
-def process_arp_packet(sio : ScreenIO, data : bytes, potential_hosts : list, hosts : dict):
+def process_arp_packet(sio : ScreenIO, data : bytes, potential_hosts : list, host_map : dict):
     arp = Networking.Layers.Ethernet.ARP.interpret_arp_header(data)
     if arp.opcode == 2 and bytes(arp.sender_ip_address) in potential_hosts: # opcode (2) == reply
-        if bytes(arp.sender_ip_address) in hosts.keys():
-            if bytes(arp.sender_mac_address) != hosts[bytes(arp.sender_ip_address)]:
+        if bytes(arp.sender_ip_address) in host_map.keys():
+            if bytes(arp.sender_mac_address) != host_map[bytes(arp.sender_ip_address)]:
                 sio.printModulePrompt('net.probe')
                 sio.print(f'{Networking.Convert.convert_ip_address(arp.sender_ip_address)} is now available at {Networking.Convert.convert_mac_address(arp.sender_mac_address)}\n')
-                hosts[bytes(arp.sender_ip_address)] = bytes(arp.sender_mac_address)
+                host_map[bytes(arp.sender_ip_address)] = bytes(arp.sender_mac_address)
         else:
             sio.printModulePrompt('net.probe')
             sio.print(f'{Networking.Convert.convert_ip_address(arp.sender_ip_address)} found at {Networking.Convert.convert_mac_address(arp.sender_mac_address)}\n')
-            hosts[bytes(arp.sender_ip_address)] = bytes(arp.sender_mac_address)
+            host_map[bytes(arp.sender_ip_address)] = bytes(arp.sender_mac_address)
 
 def listen_for_arp_replys(sio : ScreenIO, sr : socket, potential_hosts : list, hosts : dict, stop : Event):
     while not stop.is_set():

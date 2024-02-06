@@ -1,8 +1,7 @@
-import curses
 import socket
 
 sockets : dict[str, socket.socket]
-variables : dict[str, str]
+variables : dict
 sockets = {}
 variables = {}
 

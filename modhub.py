@@ -4,12 +4,11 @@ from screenio2 import ScreenIO
 from networking import Networking
 import globals
 from globals import ModuleDictionary, AnsiCodes
-import curses
 import argparse
 import os
-from time import sleep
 from threading import Thread
 from importlib import import_module
+from module_handler import importModule, runModule
 import modules.clear.clear as clear
 import modules.set.set as set
 import modules.show.show as show
@@ -26,26 +25,6 @@ ModuleDictionary['arp'] = arp
 ModuleDictionary['net.probe'] = netprobe
 ModuleDictionary['test'] = test
 
-def importModule(sio : ScreenIO, moduleName : str):
-    try:
-        module = import_module('modules.' + moduleName + '.' + moduleName)
-        ModuleDictionary[moduleName] = module
-    except ModuleNotFoundError:
-        printModuleNotFound(sio, moduleName)
-        
-def printModuleNotFound(sio : ScreenIO, moduleName : str):
-    sio.print('Error')
-    sio.print(': module \'')
-    sio.print(ScreenIO.styleString(f'{format(moduleName)}', bold=True))
-    sio.print('\' cannot be found.\n')
-
-def printModuleNotLoaded(sio : ScreenIO, moduleName : str):
-    sio.print('Module \'')
-    sio.print(ScreenIO.styleString(moduleName, bold=True))
-    sio.print('\' is not loaded. Use \'')
-    sio.print(ScreenIO.styleString(f'load {format(moduleName)}', bold=True))
-    sio.print('\' first.\n')
-
 def main(sio : ScreenIO, interface : str):
     if interface is not None:
         set.main(sio, ('set', 'iface', interface))
@@ -56,18 +35,10 @@ def main(sio : ScreenIO, interface : str):
             sio.print('Sending cleanup signals to all modules...\n')
             cleanup(sio)
             break
-        elif commandList[0] == 'load':
+        elif commandList[0] in [ 'load', 'import' ]:
             importModule(sio, commandList[1])
-        elif commandList[0] in ModuleDictionary:
-            if ModuleDictionary[commandList[0]] is None: # not imported
-                printModuleNotLoaded(sio, commandList[0])
-                continue
-            th = Thread(target=ModuleDictionary[commandList[0]].main, args=(sio, commandList))
-            th.start()
         else:
-            sio.print(f'Error: command \'')
-            sio.print(ScreenIO.styleString(f'{command}', bold=True))
-            sio.print('\' not found\n')
+            runModule(sio, commandList[0], commandList)
 
 def cleanup(sio : ScreenIO):
     threads = list()
