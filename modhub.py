@@ -13,17 +13,17 @@ import modules.clear.clear as clear
 import modules.set.set as set
 import modules.show.show as show
 import modules.get.get as get
-import modules.arp.arp as arp
-import modules.netprobe.netprobe as netprobe
+import modules.arp.spoof as arpspoof
+import modules.net.probe as netprobe
 import modules.test.test as test
 
 ModuleDictionary['clear'] = clear
 ModuleDictionary['show'] = show
 ModuleDictionary['set'] = set
 ModuleDictionary['get'] = get
-ModuleDictionary['arp'] = arp
+#ModuleDictionary['arp.spoof'] = arpspoof
 ModuleDictionary['net.probe'] = netprobe
-ModuleDictionary['test'] = test
+#ModuleDictionary['test'] = test
 
 def main(sio : ScreenIO, interface : str):
     if interface is not None:

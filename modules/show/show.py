@@ -7,7 +7,7 @@ from globals import ModuleDictionary, CursesColors
 def showIfaces(sio : ScreenIO):
     sio.print('\n')
     for i, iface in enumerate(globals.GetOptionValue('ifaces'), 1):
-        ip = Networking.IP.get_ip_address(iface, bytearr=False)
+        ip = Networking.IP.get_ip_address(iface, return_bytes=False)
         sio.print(f'\tInterface #{i}:\t')
         sio.print(iface)
         if ip is None:

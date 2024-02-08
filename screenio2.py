@@ -102,7 +102,7 @@ class WebSocketsServerThread:
         while connection_alive.is_set():
             try:
                 data = sio.outputQueue.get(timeout=0.02)
-                #sio.outputBuffer.append(data)
+                sio.outputBuffer.append(data)
                 await websocket.send(data)
             except Empty:
                 pass
@@ -130,7 +130,7 @@ class ScreenIO:
     def printPrompt(self):
         self.print('\n' + str(datetime.fromtimestamp(time())), background_color='#A2734C')
         if globals.GetOptionValue('iface') is not None:
-            self.print(f' / {Networking.IP.get_ip_address(globals.GetOptionValue("iface"), bytearr=False)}', background_color='#A2734C')
+            self.print(f' / {Networking.IP.get_ip_address(globals.GetOptionValue("iface"), return_bytes=False)}', background_color='#A2734C')
         self.print(' » ')
 
     def outputStringParser(self, str):
@@ -170,8 +170,7 @@ class ScreenIO:
         str = self.outputStringParser(str)
         str = ScreenIO.styleString(str, font_color, background_color, bold)
         self.outputQueue.put(str)
-        self.outputBuffer.append(str)
-
+        #self.outputBuffer.append(str)
     
     def printModulePrompt(self, moduleName):
         self.print('[')

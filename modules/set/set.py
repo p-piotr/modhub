@@ -2,7 +2,6 @@ from screenio2 import ScreenIO
 from networking import Networking
 import curses
 import globals
-from globals import CursesColors
 
 def printInterfaceDoesntExist(sio : ScreenIO, iface : str):
     sio.print('Interface \'')
@@ -26,11 +25,16 @@ def main(sio : ScreenIO, args : list):
             Networking.Sockets.close_sockets()
             ip = Networking.IP.get_ip_address(value)
             if ip is None:
-                sio.print('Error: cannot set this interface, no IP address available.\n')
+                sio.print('Error: cannot set interface ')
+                sio.print(f'{value}', bold=True)
+                sio.print(', no IP address available.\n')
             else:
                 globals.variables['iface'] = value
-                globals.variables['ip_addr'] = Networking.IP.get_ip_address(value)
-                globals.variables['hw_addr'] = Networking.Mac.get_mac_address(value)
+                globals.variables['ip_addr'] = Networking.IP.get_ip_address(return_bytes=False)
+                globals.variables['br_addr'] = Networking.IP.get_br_address(return_bytes=False)
+                globals.variables['hw_addr'] = Networking.Mac.get_mac_address(return_bytes=False)
+                globals.variables['gateway'] = Networking.IP.get_network_gateway(return_bytes=False)
+                globals.variables['netmask'] = Networking.IP.get_network_mask(return_bytes=False)
                 Networking.Sockets.initialize_sockets()
     else:
         globals.variables[option] = value

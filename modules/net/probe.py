@@ -5,14 +5,14 @@ from socket import *
 from binary_operations import binary_and, binary_not
 from threading import Thread, Event
 from select import select
-from time import sleep
 
 stop = Event()
 ss, sr = None, None
 running = False
+threads = []
 
 def main(sio : ScreenIO, args : list):
-    global stop, ss, sr, running
+    global stop, ss, sr, running, threads
     if len(args) > 1 and args[1] == 'stop':
         cleanup()
         return
@@ -32,6 +32,8 @@ def main(sio : ScreenIO, args : list):
     t_r = Thread(target=listen_for_arp_replys, args=(sio, sr, potential_hosts, globals.variables['host_map'], stop))
     t_s.start()
     t_r.start()
+    threads.append(t_s)
+    threads.append(t_r)
 
 def get_potential_hosts(gateway, netmask):
     hosts = set()
@@ -75,21 +77,17 @@ def send_arp_requests(sio : ScreenIO, ss : socket, potential_hosts : list, stop 
         for potential_host in potential_hosts:
             arp = Networking.Layers.Ethernet.ARP.create_arp_request_header(potential_host)
             ss.send(arp)
-        b = False
-        for i in range(20):
-            if stop.is_set():
-                b = True
-                break
-            sleep(0.5)
-        if b:
+        flag = stop.wait(10)
+        if flag:
             break
     sio.print('net.probe: sending ARP packets stopped.\n')
 
 def cleanup():
-    global stop, ss, sr, running
+    global stop, ss, sr, running, threads
     stop.set()
     running = False
-    sleep(0.5)
+    for thread in threads:
+        thread.join()
     if ss is not None:
         ss.close()
         ss = None

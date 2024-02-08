@@ -5,7 +5,10 @@ from threading import Thread
 
 def importModule(sio : ScreenIO, moduleName : str):
     try:
-        module = import_module('modules.' + moduleName + '.' + moduleName)
+        if '.' in moduleName:
+            module = import_module('modules.' + moduleName)
+        else:
+            module = import_module('modules.' + moduleName + '.' + moduleName)
         ModuleDictionary[moduleName] = module
     except ModuleNotFoundError:
         printModuleNotFound(sio, moduleName)

@@ -20,7 +20,7 @@ CursesColors = {}
 
 def GetOptionValue(option : str):
     try:
-        return variables[option]
+        return str(variables[option])
     except KeyError:
         return None
     

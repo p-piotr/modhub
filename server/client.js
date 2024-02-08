@@ -66,7 +66,7 @@ function initialize() {
     clearInputScreen();
     clearOutputScreen();
     scrollToBottom();
-    input.addEventListener('blur', keepFocusOnInput);
+    //input.addEventListener('blur', keepFocusOnInput);
 }
 
 function scrollToBottom() {
