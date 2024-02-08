@@ -6,4 +6,7 @@ def main(sio : ScreenIO, args : list):
     if len(args) > 2:
         sio.print('Error: only one option is allowed at the time.\n')
     else:
-        sio.print(f'{globals.GetOptionValue(option)}\n')
+        sio.print(f'{globals.GetOptionValue(option, to_str=True)}\n')
+
+def finish(sio : ScreenIO):
+    pass

@@ -93,6 +93,7 @@ let ws_connection = false;
 
 ws.addEventListener('message', function(event) {
     data = event.data;
+    console.log(data);
     if (data[0] == '\xff')
         executeScreenCommand(data.substr(1, data.length - 1));
     else {

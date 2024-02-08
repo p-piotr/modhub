@@ -1,20 +1,19 @@
 from screenio2 import ScreenIO
 from networking import Networking
-import curses
 import globals
-from globals import ModuleDictionary, CursesColors
+from globals import ModuleDictionary
 
-def showIfaces(sio : ScreenIO):
+def showInterfaces(sio : ScreenIO):
     sio.print('\n')
-    for i, iface in enumerate(globals.GetOptionValue('ifaces'), 1):
-        ip = Networking.IP.get_ip_address(iface, return_bytes=False)
+    for i, interface in enumerate(globals.GetOptionValue('interfaces'), 1):
+        ip = Networking.IP.get_ip_address(interface, return_bytes=False)
         sio.print(f'\tInterface #{i}:\t')
-        sio.print(iface)
+        sio.print(interface)
         if ip is None:
             sio.print('\t(no IP address available)')
         else:
             sio.print(f'\t(at {ip})')
-        if globals.GetOptionValue('iface') == iface:
+        if globals.GetOptionValue('interface') == interface:
             sio.print(' (* currently chosen)', bold=True)
         sio.print('\n')
     sio.print('\n')
@@ -31,8 +30,14 @@ def showModules(sio : ScreenIO):
     sio.print('\n')
 
 def main(sio : ScreenIO, args : list):
+    if len(args) < 2:
+        sio.print('Error: missing argument(s)\n')
+        return
     value = args[1]
-    if value in { 'ifaces', 'interfaces' }:
-        showIfaces(sio)
+    if value == 'interfaces':
+        showInterfaces(sio)
     elif value == 'modules':
         showModules(sio)
+
+def finish(sio : ScreenIO):
+    pass

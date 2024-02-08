@@ -94,7 +94,6 @@ def cleanup():
     if sr is not None:
         sr.close()
         sr = None
-    return
 
 def finish(sio : ScreenIO):
     cleanup()

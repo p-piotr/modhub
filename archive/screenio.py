@@ -67,8 +67,8 @@ class ScreenIO():
 
     def printPrompt(self, refresh=True):
         self.print(str(datetime.fromtimestamp(time())), CursesColors['WY'])
-        if globals.GetOptionValue('iface') is not None:
-            self.print(f' / {Networking.IP.get_ip_address(globals.GetOptionValue("iface"), return_bytes=False)}', CursesColors['WY'], refresh=False)
+        if globals.GetOptionValue('interface') is not None:
+            self.print(f' / {Networking.IP.get_ip_address(globals.GetOptionValue("interface"), return_bytes=False)}', CursesColors['WY'], refresh=False)
         self.print(' » ', refresh=refresh)
 
     def scan(self) -> str:

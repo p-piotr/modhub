@@ -18,14 +18,16 @@ AnsiCodes = {
 
 CursesColors = {}
 
-def GetOptionValue(option : str):
+def GetOptionValue(option : str, to_str=False):
     try:
+        if not to_str:
+            return variables[option]
         return str(variables[option])
     except KeyError:
         return None
     
 def GetDefaultInterface():
-    return GetOptionValue('iface')
+    return GetOptionValue('interface')
 
 def GetReceivingSocket():
     try:

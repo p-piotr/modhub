@@ -7,8 +7,7 @@ from globals import ModuleDictionary, AnsiCodes
 import argparse
 import os
 from threading import Thread
-from importlib import import_module
-from module_handler import importModule, runModule
+from module_handler import loadModule, runModule
 import modules.clear.clear as clear
 import modules.set.set as set
 import modules.show.show as show
@@ -23,20 +22,20 @@ ModuleDictionary['set'] = set
 ModuleDictionary['get'] = get
 #ModuleDictionary['arp.spoof'] = arpspoof
 ModuleDictionary['net.probe'] = netprobe
-#ModuleDictionary['test'] = test
+ModuleDictionary['test'] = None
 
 def main(sio : ScreenIO, interface : str):
     if interface is not None:
-        set.main(sio, ('set', 'iface', interface))
+        set.main(sio, ('set', 'interface', interface))
     while sio.isRunning():
         command = sio.scan()
         commandList = command.split(' ')
-        if commandList[0] in [ 'exit', 'quit' ] and len(commandList) == 1:
+        if commandList[0] == 'exit' and len(commandList) == 1:
             sio.print('Sending cleanup signals to all modules...\n')
             cleanup(sio)
             break
-        elif commandList[0] in [ 'load', 'import' ]:
-            importModule(sio, commandList[1])
+        elif commandList[0] == 'load':
+            loadModule(sio, commandList[1])
         else:
             runModule(sio, commandList[0], commandList)
 
@@ -63,12 +62,12 @@ def check_for_root():
 
 if __name__ == '__main__':
     check_for_root()
-    globals.variables['ifaces'] = Networking.Interfaces.get_network_interfaces()
+    globals.variables['interfaces'] = Networking.Interfaces.get_network_interfaces()
     parser = argparse.ArgumentParser(description='temporary description')
     parser.add_argument('--interface', help='use specified interface (default: no interface)')
     args = parser.parse_args()
-    if args.interface is not None and args.interface not in globals.GetOptionValue('ifaces'):
-        print(f'{AnsiCodes["RED"]}{AnsiCodes["BOLD"]}Runtime error{AnsiCodes["ENDC"]}: specified interface \'{args.interface}\' does not exist. Consider using \'show ifaces\' first.')
+    if args.interface is not None and args.interface not in globals.GetOptionValue('interfaces'):
+        print(f'{AnsiCodes["RED"]}{AnsiCodes["BOLD"]}Runtime error{AnsiCodes["ENDC"]}: specified interface \'{args.interface}\' does not exist. Consider using \'show interfaces\' first.')
         exit(-1)
     try:
         sio = ScreenIO()

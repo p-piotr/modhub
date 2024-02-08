@@ -2,20 +2,31 @@ from screenio2 import ScreenIO
 from importlib import import_module
 from globals import ModuleDictionary
 from threading import Thread
+import sys
 
-def importModule(sio : ScreenIO, moduleName : str):
+def loadModule(sio : ScreenIO, moduleName : str):
+    if '.' in moduleName:
+        fullModulePath = 'modules.' + moduleName
+    else:
+        fullModulePath = 'modules.' + moduleName + '.' + moduleName
+
     try:
-        if '.' in moduleName:
-            module = import_module('modules.' + moduleName)
-        else:
-            module = import_module('modules.' + moduleName + '.' + moduleName)
-        ModuleDictionary[moduleName] = module
+        module = import_module(fullModulePath)
     except ModuleNotFoundError:
         printModuleNotFound(sio, moduleName)
+        return
+
+    if not isStandaloneModule(module):
+        printModuleIsNotStandalone(sio, moduleName)
+        del sys.modules[fullModulePath]
+        return
+    ModuleDictionary[moduleName] = module
+
+def isStandaloneModule(module):
+    return hasattr(module, 'main') and hasattr(module, 'finish')
         
 def printModuleNotFound(sio : ScreenIO, moduleName : str):
-    sio.print('Error')
-    sio.print(': module \'')
+    sio.print('Error: module \'')
     sio.print(f'{format(moduleName)}', bold=True)
     sio.print('\' cannot be found.\n')
 
@@ -25,6 +36,11 @@ def printModuleNotLoaded(sio : ScreenIO, moduleName : str):
     sio.print('\' is not loaded. Use \'')
     sio.print(f'load {format(moduleName)}', bold=True)
     sio.print('\' first.\n')
+
+def printModuleIsNotStandalone(sio : ScreenIO, moduleName : str):
+    sio.print('Module \'')
+    sio.print(moduleName, bold=True)
+    sio.print('\' is not a standalone module, so it cannot be loaded on its own.\n')
 
 def runModule(sio : ScreenIO, moduleName : str, args : list):
     if moduleName in ModuleDictionary:

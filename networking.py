@@ -28,15 +28,15 @@ class Networking:
             return ''.join(':{:02X}'.format(b) for b in mac_address).lstrip(':')
 
     class IP:
-        def get_ip_address(iface='default', return_bytes=True):
-            if iface == 'default':
-                iface = globals.GetDefaultInterface()
+        def get_ip_address(interface='default', return_bytes=True):
+            if interface == 'default':
+                interface = globals.GetDefaultInterface()
             with socket(AF_INET, SOCK_DGRAM) as s:
                 try:
                     ip = fcntl.ioctl(
                         s.fileno(),
                         Networking.SIOCGIFADDR,
-                        struct.pack('256s', iface[:15].encode('utf-8'))
+                        struct.pack('256s', interface[:15].encode('utf-8'))
                     )[20:24]
                     if return_bytes:
                         return ip
@@ -44,15 +44,15 @@ class Networking:
                 except OSError:
                     return None
         
-        def get_br_address(iface='default', return_bytes=True):
-            if iface == 'default':
-                iface = globals.GetDefaultInterface()
+        def get_br_address(interface='default', return_bytes=True):
+            if interface == 'default':
+                interface = globals.GetDefaultInterface()
             with socket(AF_INET, SOCK_DGRAM) as s:
                 try:
                     broadcast_ip = fcntl.ioctl(
                         s.fileno(),
                         Networking.SIOCGIFBRDADDR,
-                        struct.pack('256s', iface[:15].encode('utf-8'))
+                        struct.pack('256s', interface[:15].encode('utf-8'))
                     )[20:24]
                     if return_bytes:
                         return broadcast_ip
@@ -60,13 +60,13 @@ class Networking:
                 except OSError:
                     return None
 
-        def get_network_gateway(iface='default', return_bytes=True) -> bytes | str:
-            if iface == 'default':
-                iface = globals.GetDefaultInterface()
+        def get_network_gateway(interface='default', return_bytes=True) -> bytes | str:
+            if interface == 'default':
+                interface = globals.GetDefaultInterface()
             with open('/proc/net/route') as f:
                 for line in f:
                     fields = line.strip().split()
-                    if fields[0] != iface or fields[1] != '00000000' or not int(fields[3], 16) & 2:
+                    if fields[0] != interface or fields[1] != '00000000' or not int(fields[3], 16) & 2:
                         continue
                     if return_bytes:
                         return struct.pack('<L', int(fields[2], 16))
@@ -74,16 +74,16 @@ class Networking:
                         return inet_ntoa(struct.pack('<L', int(fields[2], 16)))
                 return None
             
-        def get_network_mask(iface='default', return_bytes=True) -> bytes | str:
-            if iface == 'default':
-                iface = globals.GetDefaultInterface()
+        def get_network_mask(interface='default', return_bytes=True) -> bytes | str:
+            if interface == 'default':
+                interface = globals.GetDefaultInterface()
             with socket(AF_INET, SOCK_DGRAM) as s:
-                s.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, str(iface + '\0').encode('utf-8'))
+                s.setsockopt(SOL_SOCKET, SO_BINDTODEVICE, str(interface + '\0').encode('utf-8'))
                 try:
                     mask = fcntl.ioctl(
                         s.fileno(),
                         Networking.SIOCGIFNETMASK,
-                        struct.pack('256s', iface[:15].encode('utf-8'))
+                        struct.pack('256s', interface[:15].encode('utf-8'))
                     )[20:24]
                     if return_bytes:
                         return mask
@@ -92,15 +92,15 @@ class Networking:
                     return None
 
     class Mac:       
-        def get_mac_address(iface='default', return_bytes=True):
-            if iface == 'default':
-                iface = globals.GetDefaultInterface()
+        def get_mac_address(interface='default', return_bytes=True):
+            if interface == 'default':
+                interface = globals.GetDefaultInterface()
             with socket(AF_INET, SOCK_DGRAM) as s:
                 try:
                     mac = fcntl.ioctl(
                         s.fileno(),
                         Networking.SIOCGIFHWADDR,
-                        struct.pack('256s', iface[:15].encode('utf-8'))
+                        struct.pack('256s', interface[:15].encode('utf-8'))
                     )[18:24]
                     if return_bytes:
                         return mac
@@ -111,10 +111,10 @@ class Networking:
     class Interfaces:
         def get_network_interfaces() -> list:
             if_ni = if_nameindex()
-            ifaces = list()
-            for iface in enumerate(if_ni):
-                ifaces.append(iface[1][1])
-            return ifaces
+            interfaces = list()
+            for interface in enumerate(if_ni):
+                interfaces.append(interface[1][1])
+            return interfaces
         
     class Layers:
         class Ethernet:
@@ -338,7 +338,7 @@ class Networking:
         
         def get_sending_socket():
             s = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)
-            s.bind((globals.variables['iface'], 0))
+            s.bind((globals.variables['interface'], 0))
             return s
         
         def initialize_sockets():

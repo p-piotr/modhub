@@ -102,7 +102,8 @@ class WebSocketsServerThread:
         while connection_alive.is_set():
             try:
                 data = sio.outputQueue.get(timeout=0.02)
-                sio.outputBuffer.append(data)
+                if data[0] != '\xff': # if is not a screen command
+                    sio.outputBuffer.append(data)
                 await websocket.send(data)
             except Empty:
                 pass
@@ -129,8 +130,8 @@ class ScreenIO:
 
     def printPrompt(self):
         self.print('\n' + str(datetime.fromtimestamp(time())), background_color='#A2734C')
-        if globals.GetOptionValue('iface') is not None:
-            self.print(f' / {Networking.IP.get_ip_address(globals.GetOptionValue("iface"), return_bytes=False)}', background_color='#A2734C')
+        if globals.GetOptionValue('interface') is not None:
+            self.print(f' / {Networking.IP.get_ip_address(globals.GetOptionValue("interface"), return_bytes=False)}', background_color='#A2734C')
         self.print(' » ')
 
     def outputStringParser(self, str):

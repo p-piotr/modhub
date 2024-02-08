@@ -7,3 +7,6 @@ dns_header = b"\x15\xd0\x85\x80\x00\x01\x00\x01\x00\x00\x00\x01\x01\x31\x01\x31\
 
 def main(sio : ScreenIO, args : list):
     sio.print('test module has been called\n')
+
+def finish(sio : ScreenIO):
+    pass
