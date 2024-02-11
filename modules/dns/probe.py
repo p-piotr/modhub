@@ -24,6 +24,9 @@ def main(sio : ScreenIO, args : list):
     sr = Networking.Sockets.get_receiving_socket()
     pass
 
+def send_dns_query(host_ip, source_mac='default', source_ip='default', destination_mac='default', destination_ip='default'):
+    pass
+
 def cleanup():
     global stop, ss, sr, running, threads
     stop.set()

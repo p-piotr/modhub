@@ -50,7 +50,7 @@ def get_potential_hosts(gateway, netmask):
     return hosts
 
 def process_arp_packet(sio : ScreenIO, data : bytes, potential_hosts : list, host_map : dict):
-    arp = Networking.Layers.Ethernet.ARP.interpret_arp_header(data)
+    arp = Networking.Layers.Ethernet.ARP.interpret_arp_layer(data)
     if arp.opcode == 2 and bytes(arp.sender_ip_address) in potential_hosts: # opcode (2) == reply
         if bytes(arp.sender_ip_address) in host_map.keys():
             if bytes(arp.sender_mac_address) != host_map[bytes(arp.sender_ip_address)]:
@@ -67,7 +67,7 @@ def listen_for_arp_replys(sio : ScreenIO, sr : socket, potential_hosts : list, h
         ready = select([sr], [], [], 0.5)
         if ready[0]:
             data = sr.recv(4096)
-            eth = Networking.Layers.Ethernet.interpret_ethernet_header(data)
+            eth = Networking.Layers.Ethernet.interpret_ethernet_layer(data)
             if eth.type == 0x0806:
                 process_arp_packet(sio, data[14:], potential_hosts, hosts)
     sio.print('net.probe: listening for ARP replys stopped.\n')
@@ -75,7 +75,7 @@ def listen_for_arp_replys(sio : ScreenIO, sr : socket, potential_hosts : list, h
 def send_arp_requests(sio : ScreenIO, ss : socket, potential_hosts : list, stop : Event):
     while True:
         for potential_host in potential_hosts:
-            arp = Networking.Layers.Ethernet.ARP.create_arp_request_header(potential_host)
+            arp = Networking.Layers.Ethernet.ARP.create_arp_request_packet(potential_host)
             ss.send(arp)
         flag = stop.wait(10)
         if flag:

@@ -16,7 +16,7 @@ AnsiCodes = {
     'BOLD' : '\033[1m'
 }
 
-CursesColors = {}
+portToSocketMap = {}
 
 def GetOptionValue(option : str, to_str=False):
     try:
