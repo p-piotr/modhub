@@ -75,7 +75,7 @@ def listen_for_arp_replys(sio : ScreenIO, sr : socket, potential_hosts : list, h
 def send_arp_requests(sio : ScreenIO, ss : socket, potential_hosts : list, stop : Event):
     while True:
         for potential_host in potential_hosts:
-            arp = Networking.Layers.Ethernet.ARP.create_arp_request_packet(potential_host)
+            arp = Networking.Layers.Ethernet.ARP.create_arp_request_packet(destination_ip=potential_host)
             ss.send(arp)
         flag = stop.wait(10)
         if flag:

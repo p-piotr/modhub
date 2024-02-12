@@ -180,7 +180,8 @@ class Networking:
                         ('destination_ip_address', c_uint8 * 4)
                     ]
                 
-                def create_arp_layer(destination_mac, destination_ip, opcode, source_mac='default', source_ip='default', hardware_type=1, protocol_type=0x0800, hardware_size=6, protocol_size=4) -> bytes:
+                def create_arp_layer(destination_mac, destination_ip, opcode, source_mac='default', 
+                                     source_ip='default', hardware_type=1, protocol_type=0x0800, hardware_size=6, protocol_size=4) -> bytes:
                     if source_mac == 'default':
                         source_mac = Networking.Mac.get_mac_address()
                     if source_ip == 'default':
@@ -213,12 +214,14 @@ class Networking:
                 
                 def create_arp_request_packet(destination_ip, source_mac='default', source_ip='default') -> bytes:
                     eth_bytes = Networking.Layers.Ethernet.create_ethernet_layer('FF:FF:FF:FF:FF:FF', 0x0806, source_mac=source_mac)
-                    arp_bytes = Networking.Layers.Ethernet.ARP.create_arp_layer('00:00:00:00:00:00', destination_ip, 1, source_mac=source_mac, source_ip=source_ip)
+                    arp_bytes = Networking.Layers.Ethernet.ARP.create_arp_layer('00:00:00:00:00:00', 
+                                                                                destination_ip, 1, source_mac=source_mac, source_ip=source_ip)
                     return eth_bytes + arp_bytes
                 
-                def create_arp_reply_packet(source_mac, source_ip, destination_mac, destination_ip):
+                def create_arp_reply_packet(destination_mac, destination_ip, source_mac='default', source_ip='default'):
                     eth_bytes = Networking.Layers.Ethernet.create_ethernet_layer(destination_mac, 0x0806, source_mac=source_mac)
-                    arp_bytes = Networking.Layers.Ethernet.ARP.create_arp_layer(destination_mac, destination_ip, 2, source_mac=source_mac, source_ip=source_ip)
+                    arp_bytes = Networking.Layers.Ethernet.ARP.create_arp_layer(destination_mac, 
+                                                                                destination_ip, 2, source_mac=source_mac, source_ip=source_ip)
                     return eth_bytes + arp_bytes
 
         class IPv4:
@@ -239,7 +242,34 @@ class Networking:
                     ('destination_address', c_uint8 * 4)
                 ]
 
-            def create_ipv4_layer(ips : IPv4Struct, calculate_checksum=True) -> bytes:
+            def create_ipv4_layer(total_length, id, protocol, destination_address, 
+                                  version=4, header_length=5, services=0, ecn=0, flags=2, 
+                                  fragment_offset=0, ttl=64, checksum=0, source_address='default', calculate_checksum=True) -> bytes:
+                if source_address == 'default':
+                    source_address = Networking.IP.get_ip_address()
+                if type(source_address) != bytes:
+                    source_address = Networking.Convert.convert_ip_address(source_address)
+                if type(destination_address) != bytes:
+                    destination_address = Networking.Convert.convert_ip_address(destination_address)
+                ips = Networking.Layers.IPv4.IPv4Struct()
+                ips.version = version
+                ips.header_length = header_length
+                ips.services = services
+                ips.ecn = ecn
+                ips.total_length = total_length
+                ips.id = id
+                ips.flags = flags
+                ips.fragment_offset = fragment_offset
+                ips.ttl = ttl
+                ips.protocol = protocol
+                ips.source_address = Networking.Convert.cubytearray(source_address)
+                ips.destination_address = Networking.Convert.cubytearray(destination_address)
+                if calculate_checksum:
+                    checksum = Networking.Layers.IPv4.calculate_ipv4_checksum(ips)
+                ips.checksum = checksum
+                return Networking.Layers.IPv4.create_ipv4_layer_from_struct(ips)
+
+            def create_ipv4_layer_from_struct(ips : IPv4Struct, calculate_checksum=True) -> bytes:
                 if calculate_checksum:
                     ips.checksum = Networking.Layers.IPv4.calculate_ipv4_checksum(ips)
                 return ctypes.string_at(ctypes.addressof(ips), ctypes.sizeof(ips))
@@ -283,9 +313,23 @@ class Networking:
                         self.destination_ip = destination_ip
                         self.data = data
 
-                def create_udp_layer(udps : UDPStruct, udph : UDPChecksumPseudoHeaderHelper | None) -> bytes:
-                    if udph is not None:
-                        udps.checksum = Networking.Layers.IPv4.UDP.calculate_udp_checksum(udps, udph)
+                def create_udp_layer(source_port, destination_port, udp_data=None, source_ip=None, destination_ip=None, length=0, checksum=0, calculate_length=True):
+                    calculate_checksum = (source_ip is not None and destination_ip is not None and udp_data is not None)
+                    if calculate_length and udp_data is None:
+                        calculate_length = False
+                    udps = Networking.Layers.IPv4.UDP.UDPStruct()
+                    udps.source_port = source_port
+                    udps.destination_port = destination_port
+                    if calculate_length:
+                        length = 8 + len(udp_data)
+                    udps.length = length
+                    if calculate_checksum:
+                        udph = Networking.Layers.IPv4.UDP.UDPChecksumPseudoHeaderHelper(source_ip, destination_ip, udp_data)
+                        checksum = Networking.Layers.IPv4.UDP.calculate_udp_checksum(udps, udph)
+                    udps.checksum = checksum
+                    return Networking.Layers.IPv4.UDP.create_udp_layer_from_struct(udps)
+
+                def create_udp_layer_from_struct(udps : UDPStruct) -> bytes:
                     return ctypes.string_at(ctypes.addressof(udps), ctypes.sizeof(udps))
 
                 def interpret_udp_layer(udp_layer : bytes) -> UDPStruct:
