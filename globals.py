@@ -18,13 +18,26 @@ AnsiCodes = {
 
 portToSocketMap = {}
 
-def GetOptionValue(option : str, to_str=False):
+def PrintErrorPrompt(sio, moduleName, errorMessage):
+    sio.print(f'{moduleName}: [')
+    sio.print('err', font_color='red')
+    sio.print('] ')
+    if errorMessage not in [ None, '' ]:
+        sio.print(errorMessage)
+
+def GetOptionValue(option, to_str=False):
     try:
         if not to_str:
             return variables[option]
         return str(variables[option])
     except KeyError:
         return None
+    
+def OptionExists(option):
+    k = variables.keys()
+    if option in k:
+        return True
+    return False
     
 def GetDefaultInterface():
     return GetOptionValue('interface')

@@ -31,13 +31,19 @@ def showModules(sio : ScreenIO):
 
 def main(sio : ScreenIO, args : list):
     if len(args) < 2:
-        sio.print('Error: missing argument(s)\n')
+        sio.print('Usage: show [option]\n\n'
+                  'Available options:\n\n\tinterfaces\n\tmodules\n')
         return
     value = args[1]
     if value == 'interfaces':
         showInterfaces(sio)
     elif value == 'modules':
         showModules(sio)
+    else:
+        globals.PrintErrorPrompt(sio, 'show', None)
+        sio.print('unknown option \'')
+        sio.print(f'{value}', bold=True)
+        sio.print('\'.\n')
 
 def finish(sio : ScreenIO):
     pass

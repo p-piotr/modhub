@@ -5,10 +5,13 @@ function focusOnInput(e) {
     input.setSelectionRange(end, end);
 }
 
+let commandHistory = [];
+let commandIndex = 0;
+
 function onKeyDown(e) {
-    focusOnInput(e);
     input = document.getElementById('input');
     var keyCode = e.which;
+    //console.log(keyCode)
     switch (keyCode)
     {
         case 8: // backspace
@@ -17,20 +20,41 @@ function onKeyDown(e) {
             break;
         case 13: // enter
             e.preventDefault();
-            data = input.value.substr(2, input.value.length - 2)
+            data = input.value.substr(2, input.value.length - 2);
             //console.log(data)
             if (data.length == 0)
                 break;
-            ws.send(data)
+            if (data != commandHistory[commandHistory.length - 1]) {
+                commandHistory.push(data);
+            }
+            commandIndex = 0;
+            ws.send(data);
             input.value = '# ';
             focusOnInput();
             break;
         case 9: // tab
-            input.value += ' ';
+            focusOnInput(e)
+            if (input.value.length > 2) {
+                input.value += ' ';
+            }
             e.preventDefault();
             break;
         case 40: // down arrow
+            if (commandIndex > 0) {
+                commandIndex--;
+                input.value = '# ';
+                if (commandIndex > 0) {
+                    input.value += commandHistory[commandHistory.length - commandIndex];
+                }
+            }
+            e.preventDefault()
+            break;
         case 38: // up arrow
+            if (commandHistory.length > commandIndex) {
+                commandIndex++;
+                input.value = '# ';
+                input.value += commandHistory[commandHistory.length - commandIndex];
+            }
             e.preventDefault();
             break;
         case 32: // space
@@ -40,7 +64,7 @@ function onKeyDown(e) {
         default:
             break;
     }
-    focusOnInput()
+    //focusOnInput()
 }
 
 function keepFocusOnInput() {
@@ -66,6 +90,11 @@ function initialize() {
     clearInputScreen();
     clearOutputScreen();
     scrollToBottom();
+    input.onpaste = function(e) {
+        setTimeout(function() {
+            input.value = input.value.replace('\n', '');
+        }, 0);
+    }
     //input.addEventListener('blur', keepFocusOnInput);
 }
 
@@ -93,7 +122,7 @@ let ws_connection = false;
 
 ws.addEventListener('message', function(event) {
     data = event.data;
-    console.log(data);
+    //console.log(data);
     if (data[0] == '\xff')
         executeScreenCommand(data.substr(1, data.length - 1));
     else {

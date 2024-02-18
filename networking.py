@@ -3,14 +3,18 @@ import fcntl
 import struct
 import ctypes
 from ctypes import c_uint8, c_uint16, c_uint32, c_ubyte
+from select import select
 import globals
+import random
 from binary_operations import binary_not
 
 class Networking:
-    SIOCGIFADDR = 0x8915
-    SIOCGIFBRDADDR = 0x8919
-    SIOCGIFNETMASK = 0x891B
-    SIOCGIFHWADDR = 0x8927
+    SIOCGIFADDR = 0x8915        # get interface ip address
+    SIOCGIFBRDADDR = 0x8919     # get interface broadcast ip address
+    SIOCGIFNETMASK = 0x891B     # get interface netmask
+    SIOCGIFHWADDR = 0x8927      # get interface mac address
+    SIOCGIWNAME = 0x8B15        # get access point mac address
+    SIOCGIWESSID = 0x8B1B       # get network name
 
     ETH_P_ALL = 3
 
@@ -49,7 +53,40 @@ class Networking:
                 i += j + 1
             return hostname_dns[1:-1].decode('utf-8')
 
-    class IP:
+        def convert_ip_from_reverse_dns_form(ip : bytes, return_bytes=True) -> str | bytes:
+            ip = ip[:-13]
+            l = ip.split('.')
+            ret_addr = ''
+            for p in reversed(l):
+                ret_addr += p + '.'
+            ret_addr = ret_addr[:-1]
+            if return_bytes:
+                return 
+        def get_hostname_by_ip(ss : socket, sr : socket, host : bytes, return_bytes=True) -> str | bytes:
+            rand16 = lambda : random.randint(0, 0xFFFF)
+            host = convert_ip_to_reverse_dns_form(host, return_bytes=False)
+            port = random.randint(18000, 59500)
+            dns_transaction_id = rand16()
+            gateway_ip = Networking.IP.get_gateway_ip_address()
+            gateway_mac = Networking.Mac.get_gateway_mac_address()
+            packet = Networking.Layers.IPv4.UDP.DNS.create_dns_packet(gateway_mac, gateway_ip, port, rand16(), 
+                                        dns_transaction_id, 0x0100, [ { 'name' : host } ], [], [], [ { 'name' : '<Root>' } ])
+            ss.send(packet)
+            while True:
+                ready = select([sr], [], [], 0.5)
+                if ready[0]:
+                    answer = sr.recv(4096)
+                    ip = Networking.Layers.IPv4.interpret_ipv4_layer(answer[14:34])
+                    if bytes(ip.source_address) == gateway_ip:
+                        udp = Networking.Layers.IPv4.UDP.interpret_udp_layer(answer[34:42])
+                        if udp.destination_port == port:
+                            dns = Networking.Layers.IPv4.UDP.DNS.interpret_dns_layer(answer[42:])
+                            domain_name = dns['answers'][0]['domain_name']
+                            if return_bytes:
+                                return domain_name.encode()
+                            return domain_name
+
+            class IP:
         def get_ip_address(interface='default', return_bytes=True):
             if interface == 'default':
                 interface = globals.GetDefaultInterface()
@@ -65,6 +102,20 @@ class Networking:
                     return inet_ntoa(ip)
                 except OSError:
                     return None
+                
+        def get_ip_address_ipv6(interface='default', return_bytes=True):
+            if interface == 'default':
+                interface = globals.GetDefaultInterface()
+            with open('/proc/net/if_inet6') as f:
+                for line in f:
+                    fields = line.strip().split()
+                    if fields[5] != interface:
+                        continue
+                    ip = bytes.fromhex(fields[0])
+                    if return_bytes:
+                        return ip
+                    return inet_ntop(AF_INET6, ip)
+            return None
         
         def get_br_address(interface='default', return_bytes=True):
             if interface == 'default':
@@ -82,7 +133,7 @@ class Networking:
                 except OSError:
                     return None
 
-        def get_network_gateway(interface='default', return_bytes=True) -> bytes | str:
+        def get_gateway_ip_address(interface='default', return_bytes=True) -> bytes | str:
             if interface == 'default':
                 interface = globals.GetDefaultInterface()
             with open('/proc/net/route') as f:
@@ -94,7 +145,7 @@ class Networking:
                         return struct.pack('<L', int(fields[2], 16))
                     else:
                         return inet_ntoa(struct.pack('<L', int(fields[2], 16)))
-                return None
+            return None
             
         def get_network_mask(interface='default', return_bytes=True) -> bytes | str:
             if interface == 'default':
@@ -130,6 +181,22 @@ class Networking:
                 except OSError:
                     return None
 
+        def get_gateway_mac_address(interface='default', return_bytes=True):
+            if interface == 'default':
+                interface = globals.GetDefaultInterface()
+            with socket(AF_INET, SOCK_DGRAM) as s:
+                try:
+                    mac = fcntl.ioctl(
+                        s.fileno(),
+                        Networking.SIOCGIWNAME,
+                        struct.pack('256s', interface[:15].encode('utf-8'))
+                    )[18:24]
+                    if return_bytes:
+                        return mac
+                    return Networking.Convert.convert_mac_address(mac)
+                except OSError:
+                    return None
+
     class Interfaces:
         def get_network_interfaces() -> list:
             if_ni = if_nameindex()
@@ -147,7 +214,7 @@ class Networking:
                     ('type', c_uint16)
                 ]
             
-            def create_ethernet_layer(destination_mac, eth_type, source_mac='default'):
+            def create_ethernet_layer(destination_mac, eth_type, source_mac='default') -> bytes:
                 if source_mac == 'default':
                     source_mac = Networking.Mac.get_mac_address()
                 if type(source_mac) != bytes:
@@ -313,7 +380,8 @@ class Networking:
                         self.destination_ip = destination_ip
                         self.data = data
 
-                def create_udp_layer(source_port, destination_port, udp_data=None, source_ip=None, destination_ip=None, length=0, checksum=0, calculate_length=True):
+                def create_udp_layer(source_port, destination_port, udp_data=None, source_ip=None, 
+                                     destination_ip=None, length=0, checksum=0, calculate_length=True) -> bytes:
                     calculate_checksum = (source_ip is not None and destination_ip is not None and udp_data is not None)
                     if calculate_length and udp_data is None:
                         calculate_length = False
@@ -383,7 +451,8 @@ class Networking:
                         j = 12
                         for i in range(questions):
                             k = dns_header.find(b'\x00', j)
-                            name = dns_header[j:k]
+                            name = dns_header[j:k+1]
+                            name = Networking.Convert.convert_hostname_from_dns_format(name)
                             j = k + 1
                             dns_type = int.from_bytes(dns_header[j:j+2], 'big')
                             q_class = int.from_bytes(dns_header[j+2:j+4], 'big')
@@ -395,12 +464,14 @@ class Networking:
                             })
                         for i in range(answer_rrs):
                             name, k = Networking.Layers.IPv4.UDP.DNS.get_dns_hostname_from_index(dns_header, j)
+                            name = name.decode('utf-8')
                             dns_type = int.from_bytes(dns_header[j+k:j+k+2], 'big')
                             q_class = int.from_bytes(dns_header[j+k+2:j+k+4], 'big')
                             ttl = int.from_bytes(dns_header[j+k+4:j+k+8], 'big')
                             data_len = int.from_bytes(dns_header[j+k+8:j+k+10], 'big')
                             j += k + 10
                             domain_name, k = Networking.Layers.IPv4.UDP.DNS.get_dns_hostname_from_index(dns_header, j)
+                            domain_name = domain_name.decode('utf-8')
                             j += k
                             answers.append({
                                 'name' : name,
@@ -414,6 +485,7 @@ class Networking:
                             name, k = Networking.Layers.IPv4.UDP.DNS.get_dns_hostname_from_index(dns_header, j)
                             if name == b'':
                                 name = b'<Root>'
+                            name = name.decode('utf-8')
                             dns_type = int.from_bytes(dns_header[j+k:j+k+2], 'big')
                             udp_payload_size = int.from_bytes(dns_header[j+k+2:j+k+4], 'big')
                             hb_rcode = int.from_bytes(dns_header[j+k+4:j+k+5], 'big')
@@ -442,7 +514,7 @@ class Networking:
                             'additional_records' : additional_records
                         }
                         
-                    def create_dns_layer(transaction_id, flags, questions, answer_rrs, authority_rrs, additional_rrs, queries, answers, authority_records, additional_records):
+                    def create_dns_layer(transaction_id, flags, questions, answer_rrs, authority_rrs, additional_rrs, queries, answers, authority_records, additional_records) -> bytes:
                         ht = lambda a : bytes(c_uint16(htons(a)))
                         transaction_id = ht(transaction_id)
                         flags = ht(flags)
@@ -505,7 +577,7 @@ class Networking:
                                 return None
                             if additional_record['name'] in hostname_indices:
                                 additional_records_bytes += b'\xc0' + int.to_bytes(hostname_indices[answer['name']])
-                            elif additional_record['name'] == b'<Root>':
+                            elif additional_record['name'] == '<Root>':
                                 additional_records_bytes += b'\x00'
                             else:
                                 additional_records_bytes += Networking.Convert.convert_hostname_to_dns_format(answer['name'])
@@ -544,7 +616,7 @@ class Networking:
                         return transaction_id + flags + questions + answer_rrs + authority_rrs + additional_rrs + \
                                 queries_bytes + answers_bytes + additional_records_bytes
                         
-                    def create_dns_packet(destination_mac, destination_ip, source_udp_port, queries, answers, authority_records, additional_records, source_mac='default', source_ip='default', destination_udp_port=53):
+                    def create_dns_packet(destination_mac, destination_ip, source_udp_port, ip_id, transaction_id, dns_flags, queries, answers, authority_records, additional_records, source_mac='default', source_ip='default', destination_udp_port=53, ttl=64) -> bytes:
                         if source_mac == 'default':
                             source_mac = Networking.Mac.get_mac_address()
                         if source_ip == 'default':
@@ -557,21 +629,39 @@ class Networking:
                             destination_mac = Networking.Convert.convert_mac_address(destination_mac)
                         if type(destination_ip) != bytes:
                             destination_ip = Networking.Convert.convert_ip_address(destination_ip)
-                        if type(host_ip) != bytes:
-                            host_ip = Networking.Convert.convert_ip_address(host_ip)
-                        es = Networking.Layers.Ethernet.EthernetStruct()
-                        es.destination_mac = Networking.Convert.cubytearray(destination_mac)
-                        es.source_mac = Networking.Convert.cubytearray(source_mac)
-                        es.type = 0x0800 # IPv4
-                        pass
+                        eth_bytes = Networking.Layers.Ethernet.create_ethernet_layer(destination_mac, 0x0800, source_mac=source_mac)
+                        if queries is not None:
+                            len_queries = len(queries)
+                        else: len_queries = 0
+                        if answers is not None:
+                            len_answers = len(answers)
+                        else: len_answers = 0
+                        if authority_records is not None:
+                            len_authority_records = len(authority_records)
+                        else: len_authority_records = 0
+                        if additional_records is not None:
+                            len_additional_records = len(additional_records)
+                        else: len_additional_records = 0
+                        dns_bytes = Networking.Layers.IPv4.UDP.DNS.create_dns_layer(
+                            transaction_id, dns_flags, len_queries, len_answers, len_authority_records, len_additional_records,
+                            queries, answers, authority_records, additional_records)
+                        ip_bytes = Networking.Layers.IPv4.create_ipv4_layer(20 + 8 + len(dns_bytes), 
+                                    ip_id, 0x11, destination_ip, source_address=source_ip, ttl=ttl)
+                        udp_bytes = Networking.Layers.IPv4.UDP.create_udp_layer(source_udp_port, 
+                                    destination_udp_port, dns_bytes, source_ip=source_ip, destination_ip=destination_ip)
+                        return eth_bytes + ip_bytes + udp_bytes + dns_bytes
                         
     class Sockets:
         def get_receiving_socket():
-            return socket(AF_PACKET, SOCK_RAW, htons(Networking.ETH_P_ALL))
+            s = socket(AF_PACKET, SOCK_RAW, htons(Networking.ETH_P_ALL))
+            s.setblocking(False)
+            return s
         
-        def get_sending_socket():
+        def get_sending_socket(interface='default'):
+            if interface == 'default':
+                interface = globals.GetDefaultInterface()
             s = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)
-            s.bind((globals.variables['interface'], 0))
+            s.bind((interface, 0))
             return s
         
         def initialize_sockets():

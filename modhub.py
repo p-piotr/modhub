@@ -13,15 +13,17 @@ import modules.set.set as set
 import modules.show.show as show
 import modules.get.get as get
 import modules.arp.spoof as arpspoof
-import modules.net.probe as netprobe
+import modules.arp.probe as arpprobe
 import modules.test.test as test
+import modules.dns.probe as dnsprobe
 
 ModuleDictionary['clear'] = clear
 ModuleDictionary['show'] = show
 ModuleDictionary['set'] = set
 ModuleDictionary['get'] = get
 #ModuleDictionary['arp.spoof'] = arpspoof
-ModuleDictionary['net.probe'] = netprobe
+ModuleDictionary['arp.probe'] = arpprobe
+ModuleDictionary['dns.probe'] = dnsprobe
 ModuleDictionary['test'] = None
 
 def main(sio : ScreenIO, interface : str):
@@ -51,7 +53,6 @@ def cleanup(sio : ScreenIO):
     for th in threads:
         th.join()
     Networking.Sockets.close_sockets()
-    sio.print('Finishing...\n')
     sio.__del__()
 
 def check_for_root():
@@ -73,5 +74,4 @@ if __name__ == '__main__':
         sio = ScreenIO()
         main(sio, args.interface)
     except KeyboardInterrupt:
-        sio.print('\nFinishing...\n')
         cleanup(sio)
