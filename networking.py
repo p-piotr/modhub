@@ -86,7 +86,7 @@ class Networking:
                                 return domain_name.encode()
                             return domain_name
 
-            class IP:
+    class IP:
         def get_ip_address(interface='default', return_bytes=True):
             if interface == 'default':
                 interface = globals.GetDefaultInterface()
